@@ -99,6 +99,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:1
 .modal-body{font-size:12px;color:var(--text-mid);margin-bottom:22px;line-height:1.8;}
 .modal-btns{display:flex;gap:10px;justify-content:flex-end;}
 #clock{font-size:11px;color:var(--lime);letter-spacing:0.05em;}
+.vsel-btn{background:var(--card);border:1px solid var(--border);color:var(--text-mid);font-family:var(--mono);font-size:11px;padding:5px 10px;cursor:pointer;transition:all 0.12s;}
+.vsel-btn:hover{border-color:var(--lime);color:var(--lime);}
+.vsel-btn.active{border-color:var(--lime);color:var(--lime);background:var(--lime-dim);}
 </style>
 </head>
 <body>
@@ -144,8 +147,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:1
   <div class="quick-grid">
     <button class="qbtn" onclick="quick('z','in')"><span class="icon">💰</span>Tržba z kasy</button>
     <button class="qbtn" onclick="quick('do banky','out')"><span class="icon">🏦</span>Do banky</button>
-    <button class="qbtn" onclick="vyplaty()"><span class="icon">👤</span>Výplaty</button>
-    <button class="qbtn" onclick="quick('komis','out')"><span class="icon">📦</span>Komis/tovar</button>
+    <button class="qbtn" onclick="showVyplaty()"><span class="icon">👤</span>Výplaty</button>
+    <button class="qbtn" onclick="showKomis()"><span class="icon">📦</span>Komis/tovar</button>
   </div>
   <div class="form-row">
     <div class="ef"><label>Dátum</label><input type="text" id="fDate" placeholder="29.3." maxlength="8"/></div>
@@ -193,6 +196,130 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:1
   </div>
 </div>
 
+<!-- VÝPLATY MODAL -->
+<div class="overlay" id="vyplatyOverlay">
+  <div class="modal" style="min-width:320px;max-width:440px;">
+    <div class="modal-title">💸 Výplata</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="ef">
+          <label>Dátum</label>
+          <input type="text" id="vDate" placeholder="29.3." maxlength="8"/>
+        </div>
+        <div class="ef">
+          <label>Obdobie (napr. 1/4/2026)</label>
+          <input type="text" id="vObdobie" placeholder="1/4/2026"/>
+        </div>
+      </div>
+
+      <div class="ef">
+        <label>Zamestnanec</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="vsel-btn" onclick="selectZam(this,'Ľuboš')">Ľuboš</button>
+          <button class="vsel-btn" onclick="selectZam(this,'Ferick')">Ferick</button>
+          <button class="vsel-btn" onclick="selectZam(this,'Mayo')">Mayo</button>
+          <button class="vsel-btn" onclick="selectZam(this,'')">Iný...</button>
+        </div>
+        <input type="text" id="vMeno" placeholder="Meno zamestnanca" style="margin-top:6px;width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;" readonly/>
+      </div>
+
+      <div class="ef">
+        <label>Suma €</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+          <button class="vsel-btn" onclick="setSuma(300)">300 €</button>
+          <button class="vsel-btn" onclick="setSuma(350)">350 €</button>
+          <button class="vsel-btn" onclick="setSuma(400)">400 €</button>
+          <button class="vsel-btn" onclick="setSuma(450)">450 €</button>
+          <button class="vsel-btn" onclick="setSuma(500)">500 €</button>
+        </div>
+        <input type="number" id="vSuma" placeholder="Zadaj sumu..." min="0" step="0.01" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;"/>
+      </div>
+
+      <div id="vPreview" style="background:var(--card2);border:1px solid var(--border);padding:10px 12px;font-size:12px;color:var(--text-mid);display:none;">
+        Zapíše sa: <span id="vPreviewText" style="color:var(--lime);"></span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn" onclick="closeVyplaty()">Zrušiť</button>
+      <button class="btn" style="background:var(--lime);color:#111;border-color:var(--lime);" onclick="submitVyplata()">Zapísať výplatu</button>
+    </div>
+  </div>
+</div>
+
+<!-- KOMIS / TOVAR MODAL -->
+<div class="overlay" id="komisOverlay">
+  <div class="modal" style="min-width:320px;max-width:440px;">
+    <div class="modal-title">📦 Komis / Tovar / Iné</div>
+
+    <!-- Typ výberu -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="vsel-btn" id="kTypKomis" onclick="selectKTyp('komis')">📋 Komis</button>
+      <button class="vsel-btn" id="kTypDobierka" onclick="selectKTyp('dobierka')">🚚 Dobierka</button>
+      <button class="vsel-btn" id="kTypIne" onclick="selectKTyp('ine')">✏️ Iné</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+
+      <!-- Dátum vždy -->
+      <div class="ef">
+        <label>Dátum</label>
+        <input type="text" id="kDate" placeholder="29.3." maxlength="8"/>
+      </div>
+
+      <!-- KOMIS polia -->
+      <div id="kFieldsKomis" style="display:none;flex-direction:column;gap:10px;">
+        <div class="ef">
+          <label>Číslo komisu</label>
+          <input type="text" id="kCislo" placeholder="napr. 1067, Gorčík..." />
+        </div>
+      </div>
+
+      <!-- DOBIERKA polia -->
+      <div id="kFieldsDobierka" style="display:none;flex-direction:column;gap:10px;">
+        <div class="ef">
+          <label>Dodávateľ</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+            <button class="vsel-btn" onclick="selectDodavatel(this,'Thomann')">Thomann</button>
+            <button class="vsel-btn" onclick="selectDodavatel(this,'Muziker')">Muziker</button>
+            <button class="vsel-btn" onclick="selectDodavatel(this,'Drumbla')">Drumbla</button>
+            <button class="vsel-btn" onclick="selectDodavatel(this,'Gorčík')">Gorčík</button>
+            <button class="vsel-btn" onclick="selectDodavatel(this,'')">Iný...</button>
+          </div>
+          <input type="text" id="kDodavatel" placeholder="Názov dodávateľa" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;" />
+        </div>
+      </div>
+
+      <!-- INÉ polia -->
+      <div id="kFieldsIne" style="display:none;flex-direction:column;gap:10px;">
+        <div class="ef">
+          <label>Účel / Popis</label>
+          <input type="text" id="kUcel" placeholder="napr. oprava, materiál..." />
+        </div>
+      </div>
+
+      <!-- Suma vždy -->
+      <div class="ef">
+        <label>Suma €</label>
+        <input type="number" id="kSuma" placeholder="0" min="0" step="0.01"
+          style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;"
+          oninput="updateKPreview()"/>
+      </div>
+
+      <!-- Náhľad -->
+      <div id="kPreview" style="background:var(--card2);border:1px solid var(--border);padding:10px 12px;font-size:12px;color:var(--text-mid);display:none;">
+        Zapíše sa: <span id="kPreviewText" style="color:var(--lime);"></span>
+      </div>
+
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn" onclick="closeKomis()">Zrušiť</button>
+      <button class="btn" style="background:var(--lime);color:#111;border-color:var(--lime);" onclick="submitKomis()">Zapísať</button>
+    </div>
+  </div>
+</div>
 <script>
 const API     = 'https://script.google.com/macros/s/AKfycbwm2OQhP5jbCeR8QGH2Zho_as_uc2_lDQaNGRWYd6JjWuJ6x33HOH1lv01cI_Mgi6MR4A/exec';
 const API_KEY = 'Zmc2ogzEiF5ycS0PIzxIAuT68UbmxSF6YQUWgYVUJug';
@@ -277,11 +404,66 @@ function quick(popis,type){
   document.getElementById('fPopis').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
-function vyplaty(){
-  showModal('Výplaty',`Pridať štandardné výplaty pre <strong>${today()}</strong>?<br><br><span style="color:var(--red)">Ľuboš −300 € · Ferick −450 € · Mayo −450 €</span>`,
-    ()=>writeEntries([makeEntry(today(),'Ľuboš',null,300),makeEntry(today(),'Ferick',null,450),makeEntry(today(),'Mayo',null,450)])
-  );
+function showVyplaty(){
+  document.getElementById('vDate').value = today();
+  document.getElementById('vObdobie').value = '';
+  document.getElementById('vMeno').value = '';
+  document.getElementById('vSuma').value = '';
+  document.getElementById('vPreview').style.display = 'none';
+  // reset buttons
+  document.querySelectorAll('.vsel-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('vyplatyOverlay').classList.add('open');
 }
+function closeVyplaty(){
+  document.getElementById('vyplatyOverlay').classList.remove('open');
+}
+function selectZam(btn, meno){
+  document.querySelectorAll('#vyplatyOverlay .vsel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const menoInput = document.getElementById('vMeno');
+  menoInput.value = meno;
+  menoInput.readOnly = meno !== '';
+  if(meno === '') { menoInput.readOnly = false; menoInput.focus(); }
+  // set default suma pre znamych
+  const defaults = {'Ľuboš':300,'Ferick':450,'Mayo':450};
+  if(defaults[meno]) { document.getElementById('vSuma').value = defaults[meno]; }
+  updateVPreview();
+}
+function setSuma(suma){
+  document.getElementById('vSuma').value = suma;
+  updateVPreview();
+}
+function updateVPreview(){
+  const meno = document.getElementById('vMeno').value.trim();
+  const suma = document.getElementById('vSuma').value;
+  const obdobie = document.getElementById('vObdobie').value.trim();
+  const datum = document.getElementById('vDate').value.trim() || today();
+  if(meno && suma){
+    const popis = obdobie ? `${meno} ${obdobie}` : meno;
+    document.getElementById('vPreviewText').textContent = `${datum} · ${popis} · −${suma} €`;
+    document.getElementById('vPreview').style.display = 'block';
+  } else {
+    document.getElementById('vPreview').style.display = 'none';
+  }
+}
+function submitVyplata(){
+  const meno = document.getElementById('vMeno').value.trim();
+  const suma = parseFloat(document.getElementById('vSuma').value) || null;
+  const obdobie = document.getElementById('vObdobie').value.trim();
+  const datum = document.getElementById('vDate').value.trim() || today();
+  if(!meno){ toast('Vyber alebo zadaj meno','er'); return; }
+  if(!suma){ toast('Zadaj sumu','er'); return; }
+  const popis = obdobie ? `${meno} ${obdobie}` : meno;
+  closeVyplaty();
+  writeEntries([makeEntry(datum, popis, null, suma)]);
+}
+// Live preview update
+document.addEventListener('DOMContentLoaded', () => {
+  ['vMeno','vSuma','vObdobie','vDate'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updateVPreview);
+  });
+});
 
 function nlAdd(){
   const inp=document.getElementById('nlIn');const raw=inp.value.trim();if(!raw)return;
@@ -338,7 +520,62 @@ function confirmReset(){
 
 function showModal(title,body,cb){document.getElementById('mTitle').textContent=title;document.getElementById('mBody').innerHTML=body;document.getElementById('mConfirm').onclick=()=>{closeModal();cb();};document.getElementById('overlay').classList.add('open');}
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeVyplaty();closeKomis();}});
+
+// ── KOMIS / TOVAR / INÉ ──────────────────────
+let kTyp=null;
+function showKomis(){
+  kTyp=null;
+  document.getElementById('kDate').value=today();
+  ['kCislo','kDodavatel','kUcel','kSuma'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('kPreview').style.display='none';
+  ['kTypKomis','kTypDobierka','kTypIne'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  ['kFieldsKomis','kFieldsDobierka','kFieldsIne'].forEach(id=>document.getElementById(id).style.display='none');
+  document.querySelectorAll('#komisOverlay .vsel-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('komisOverlay').classList.add('open');
+}
+function closeKomis(){document.getElementById('komisOverlay').classList.remove('open');}
+function selectKTyp(typ){
+  kTyp=typ;
+  ['kTypKomis','kTypDobierka','kTypIne'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  ['kFieldsKomis','kFieldsDobierka','kFieldsIne'].forEach(id=>document.getElementById(id).style.display='none');
+  if(typ==='komis')   {document.getElementById('kTypKomis').classList.add('active');   document.getElementById('kFieldsKomis').style.display='flex';   document.getElementById('kCislo').focus();}
+  if(typ==='dobierka'){document.getElementById('kTypDobierka').classList.add('active');document.getElementById('kFieldsDobierka').style.display='flex';}
+  if(typ==='ine')     {document.getElementById('kTypIne').classList.add('active');     document.getElementById('kFieldsIne').style.display='flex';     document.getElementById('kUcel').focus();}
+  updateKPreview();
+}
+function selectDodavatel(btn,meno){
+  document.querySelectorAll('#kFieldsDobierka .vsel-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const inp=document.getElementById('kDodavatel');
+  inp.value=meno; inp.readOnly=meno!=='';
+  if(meno===''){inp.readOnly=false;inp.focus();}
+  updateKPreview();
+}
+function updateKPreview(){
+  const datum=document.getElementById('kDate').value.trim()||today();
+  const suma=document.getElementById('kSuma').value;
+  if(!kTyp||!suma){document.getElementById('kPreview').style.display='none';return;}
+  let popis='';
+  if(kTyp==='komis')   {const c=document.getElementById('kCislo').value.trim();    popis=c?`komis ${c}`:'komis';}
+  if(kTyp==='dobierka'){const d=document.getElementById('kDodavatel').value.trim();popis=d?`dobierka ${d}`:'dobierka';}
+  if(kTyp==='ine')     {const u=document.getElementById('kUcel').value.trim();     popis=u||'iné';}
+  document.getElementById('kPreviewText').textContent=`${datum} · ${popis} · −${suma} €`;
+  document.getElementById('kPreview').style.display='block';
+}
+function submitKomis(){
+  if(!kTyp){toast('Vyber typ: Komis, Dobierka alebo Iné','er');return;}
+  const datum=document.getElementById('kDate').value.trim()||today();
+  const suma=parseFloat(document.getElementById('kSuma').value)||null;
+  if(!suma){toast('Zadaj sumu','er');return;}
+  let popis='';
+  if(kTyp==='komis')   {const c=document.getElementById('kCislo').value.trim();    if(!c){toast('Zadaj číslo komisu','er');return;} popis=`komis ${c}`;}
+  if(kTyp==='dobierka'){const d=document.getElementById('kDodavatel').value.trim();if(!d){toast('Zadaj dodávateľa','er');return;} popis=`dobierka ${d}`;}
+  if(kTyp==='ine')     {const u=document.getElementById('kUcel').value.trim();     if(!u){toast('Zadaj účel','er');return;} popis=u;}
+  closeKomis();
+  writeEntries([makeEntry(datum,popis,null,suma)]);
+}
+['kCislo','kDodavatel','kUcel','kDate','kSuma'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',updateKPreview);});
 
 function toast(msg,t='ok'){const c=document.getElementById('toasts');const d=document.createElement('div');d.className=`toast ${t==='ok'?'tok':t==='er'?'ter':'tin'}`;d.textContent=msg;c.appendChild(d);setTimeout(()=>d.remove(),3000);}
 function hideLoading(msg){if(msg)document.getElementById('loadingMsg').textContent=msg;setTimeout(()=>document.getElementById('loadingScreen').classList.add('hide'),300);}
