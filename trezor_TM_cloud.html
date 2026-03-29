@@ -194,7 +194,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:1
 </div>
 
 <script>
-const API     = 'https://script.google.com/macros/s/AKfycbwuWi-6khbjzJYTUtU9ccS748dxc3RCkw8asQYm9JN7rDhG1UHdo-syZn_bqkndAJQCaQ/exec';
+const API     = 'https://script.google.com/macros/s/AKfycbwm2OQhP5jbCeR8QGH2Zho_as_uc2_lDQaNGRWYd6JjWuJ6x33HOH1lv01cI_Mgi6MR4A/exec';
 const API_KEY = 'Zmc2ogzEiF5ycS0PIzxIAuT68UbmxSF6YQUWgYVUJug';
 const BASE    = 4026.20;
 let entries   = [];
@@ -270,6 +270,7 @@ function addManual(){
 }
 
 function quick(popis,type){
+  if(popis==='z') popis='hotovosť z tržby';
   document.getElementById('fDate').value=today();document.getElementById('fPopis').value=popis;
   document.getElementById('fIn').value='';document.getElementById('fOut').value='';
   document.getElementById(type==='in'?'fIn':'fOut').focus();
@@ -297,7 +298,7 @@ function parseNL(text){
     let d=gDate;const pdm=part.match(/(\d{1,2})[./](\d{1,2})/);
     if(pdm){d=`${pdm[1]}.${pdm[2]}.`;part=part.replace(pdm[0],'').trim();}
     const nm=part.match(/(\d+(?:[.,]\d+)?)/);const a=nm?parseFloat(nm[1].replace(',','.')):null;if(!a)return;
-    if(/trzba|prijem z|z kasy|^z\b|trzbu/.test(part))        out.push(makeEntry(d,'z',a,null));
+    if(/trzba|prijem z|z kasy|^z\b|trzbu/.test(part))        out.push(makeEntry(d,'hotovosť z tržby',a,null));
     else if(/do banky|banka/.test(part))                      out.push(makeEntry(d,'do banky',null,a));
     else if(/lubos/.test(part))                               out.push(makeEntry(d,'Ľuboš',null,a));
     else if(/ferick/.test(part))                              out.push(makeEntry(d,'Ferick',null,a));
